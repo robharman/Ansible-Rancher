@@ -1,0 +1,9 @@
+---
+- hosts: rancher
+  gather_facts: yes
+  become: yes
+  roles:
+    - role: common
+    - role: kubernetes/common
+    - role: kubernetes/rke
+    - role: kubernetes/rancher

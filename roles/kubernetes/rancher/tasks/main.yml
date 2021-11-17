@@ -1,0 +1,160 @@
+- name: Enable Rancher inbound cluster traffic
+  community.general.ufw:
+    rule: allow
+    port: '{{ item }}'
+    src: 10.42.0.0/15
+    dest: 10.42.0.0/15
+  loop:
+    - 80
+    - 443
+  register: result
+  retries: 3
+  delay: 1
+  until: result is not failed
+
+- name: Enable Rancher to cluster node web traffic.
+  community.general.ufw:
+    rule: allow
+    port: '{{ item }}'
+    src: 10.42.0.0/15
+    dest: '{{ vm_ipaddress }}'
+  loop:
+    - 80
+    - 443
+  register: result
+  retries: 3
+  delay: 1
+  until: result is not failed
+
+- name: Enable Rancher inbound cluster traffic
+  community.general.ufw:
+    rule: allow
+    port: '{{ item }}'
+    src: 10.42.0.0/15
+    dest: '{{ vm_k8sipaddress }}'
+  loop:
+    - 80
+    - 443
+  register: result
+  retries: 3
+  delay: 1
+  until: result is not failed
+
+- name: Enable Rancher inbound DNS
+  community.general.ufw:
+    rule: allow
+    port: 53
+    proto: udp
+    src: 10.42.0.0/15
+    dest: '{{ item }}'
+  loop:
+    - '{{ vm_k8sipaddress }}'
+    - '{{ vm_ipaddress }}'
+    - '10.42.0.0/15'
+  register: result
+  retries: 3
+  delay: 1
+  until: result is not failed
+
+- name: Reload UFW
+  community.general.ufw:
+    state: reloaded
+  register: result
+  retries: 3
+  delay: 1
+  until: result is not failed
+
+- name: Add Rancher Helm repo
+  kubernetes.core.helm_repository:
+    repo_name: rancher-latest
+    repo_url: https://releases.rancher.com/server-charts/latest
+
+- name: Export KUBECONFIG variable
+  shell: export KUBECONFIG=/root/.kube/config
+  when: vm_initialnode
+
+- name: Ensure cert dir exists
+  file:
+    path: /etc/rancher/ssl
+    state: directory
+
+- name: Copy Rancher cert chain
+  copy:
+    src: '{{ item.src }}'
+    dest: '{{ item.dest }}'
+    mode: '{{ item.mode }}'
+    owner: rancher
+  loop:
+    - { src: files/rancher-ingress.crt, dest: /etc/rancher/ssl/rancher-ingress.crt, mode: '0744' }
+    - { src: files/rancher-ingress.key, dest: /etc/rancher/ssl/rancher-ingress.key, mode: '0700' }
+    # Uncomment out if using a chained ca cert, or if local machine doesn't trust the above cert's CA
+    # - { src: files/cacerts.crt, dest: /etc/rancher/ssl/cacerts.pem, mode: '0744' }
+
+- name: Create Rancher kubernetes namespace
+  kubernetes.core.k8s:
+    name: cattle-system
+    kind: namespace
+    api_version: v1
+    state: present
+  when: vm_initialnode
+
+- name: Check for Rancher Ingress cert
+  kubernetes.core.k8s:
+    name: tls-rancher-ingress
+    kind: secret
+    namespace: cattle-system
+  register: tlsrancheringress
+
+- name: Create Rancher Ingress secret
+  shell: kubectl -n cattle-system create secret tls tls-rancher-ingress --cert=/etc/rancher/ssl/rancher-ingress.crt --key=/etc/rancher/ssl/rancher-ingress.key
+  when: not tlsrancheringress
+
+- name: Make sure ingress setup jobs to complete
+  shell: kubectl wait --for=condition=complete job/{{ item }} -n ingress-nginx --timeout=30s
+  loop:
+    - ingress-nginx-admission-create
+    - ingress-nginx-admission-patch
+  changed_when: false
+
+- name: Remove setup jobs
+  shell: kubectl delete job {{ item }} -n ingress-nginx
+  loop:
+    - ingress-nginx-admission-create
+    - ingress-nginx-admission-patch
+  when: vm_initialnode
+
+- name: Wait for ingress-nginx pods to be ready
+  shell: kubectl get pod -n ingress-nginx
+  register: pods
+  retries: 3
+  delay: 30
+  until: '"Running" in pods.stdout'
+  changed_when: false
+
+# Uncomment out if using a chained cacert, or if local machine doesn't trust the Rancher cert's CA
+# - name: Check for CA Certificate secret
+#   kubernetes.core.k8s:
+#     name: tls-ca
+#     kind: secret
+#     namespace: cattle-system
+#   register: tlsca
+#
+# - name: Create CA Certificate secret
+#   shell: kubectl -n cattle-system create secret generic tls-ca --from-file=/etc/rancher/ssl/cacerts.pem
+#   when: not tlsca
+#
+
+- name: Install Rancher
+  kubernetes.core.helm:
+    name: rancher
+    chart_ref: rancher-latest/rancher
+    release_namespace: cattle-system
+    create_namespace: false
+    values:
+      ingress.tls.source: tls-rancher-ingress
+      hostname: '{{ rancher_hostname }}'
+      replicas: 3
+      tls: external
+# Uncomment out if using a chained cacert, or if local machine doesn't trust the Rancher cert's CA
+#      privateCA: true
+  when: vm_initialnode

@@ -1,0 +1,93 @@
+- name: Harden SSH Config
+  lineinfile:
+    path: '{{ item.path }}'
+    line: '{{ item.line }}'
+    regexp: '{{ item.regexp }}'
+    create: yes
+  loop:
+    - { path: '/etc/ssh/sshd_config', regexp: '^#PermitRootLogin prohibit-password', line: 'PermitRootLogin no '}
+    - { path: '/etc/ssh/sshd_config', regexp: '^PasswordAuthentication yes', line: 'PasswordAuthentication no '}
+
+- name: Set unattended upgrades
+  lineinfile:
+    path: '{{ item.path }}'
+    line: '{{ item.line }}'
+    create: yes
+  loop:
+    - { line: 'Unattended-Upgrade::Remove-Unused-Kernel-Packages "true";', path: '/etc/apt/apt.conf.d/50unattended-upgrades' }
+    - { line: 'Unattended-Upgrade::Remove-Unused-Dependencies "true";', path: '/etc/apt/apt.conf.d/50unattended-upgrades' }
+    - { line: 'Unattended-Upgrade::Automatic-Reboot "true";', path: '/etc/apt/apt.conf.d/50unattended-upgrades' }
+    - { line: 'Unattended-Upgrade::Automatic-Reboot-Time "05:30";', path: '/etc/apt/apt.conf.d/50unattended-upgrades' }
+
+- name: Set auto-update period
+  lineinfile:
+    path: '{{ item.path }}'
+    line: '{{ item.line }}'
+    create: yes
+  loop:
+    - { path: '/etc/apt/apt.conf.d/20auto-upgrades', line: 'APT::Periodic::Update-Package-Lists "7";' }
+    - { path: '/etc/apt/apt.conf.d/20auto-upgrades', line: 'APT::Periodic::Download-Upgradeable-Packages "7";' }
+    - { path: '/etc/apt/apt.conf.d/20auto-upgrades', line: 'APT::Periodic::AutocleanInterval "7";' }
+    - { path: '/etc/apt/apt.conf.d/20auto-upgrades', line: 'APT::Periodic::Unattended-Upgrade "7";' }
+
+- name: Disable unneeded network protocols
+  lineinfile:
+    path: '{{ item.path }}'
+    line: '{{ item.line }}'
+    create: yes
+  loop:
+    - { path: '/etc/modprobe.d/DISABLENET.conf', line: 'install dccp /bin/true' }
+    - { path: '/etc/modprobe.d/DISABLENET.conf', line: 'install sctp /bin/true' }
+    - { path: '/etc/modprobe.d/DISABLENET.conf', line: 'install rds /bin/true' }
+    - { path: '/etc/modprobe.d/DISABLENET.conf', line: 'install tipc /bin/true' }
+
+- name: Disable unneeded filesystem modules
+  lineinfile:
+    path: '{{ item.path }}'
+    line: '{{ item.line }}'
+    create: yes
+  loop:
+    - { path: '/etc/modprobe.d/DISABLEFS.conf', line: 'install cramfs /bin/true' }
+    - { path: '/etc/modprobe.d/DISABLEFS.conf', line: 'install freevxfs /bin/true' }
+    - { path: '/etc/modprobe.d/DISABLEFS.conf', line: 'install jffs2 /bin/true' }
+    - { path: '/etc/modprobe.d/DISABLEFS.conf', line: 'install hfs /bin/true' }
+    - { path: '/etc/modprobe.d/DISABLEFS.conf', line: 'install hfsplus /bin/true' }
+    - { path: '/etc/modprobe.d/DISABLEFS.conf', line: 'install squashfs /bin/true' }
+    - { path: '/etc/modprobe.d/DISABLEFS.conf', line: 'install udf /bin/true' }
+    - { path: '/etc/modprobe.d/DISABLEFS.conf', line: 'install vfat /bin/true' }
+
+- name: Disable assorted unneeded kernel modules
+  lineinfile:
+    path: '{{ item.path }}'
+    line: '{{ item.line }}'
+    create: yes
+  loop:
+    - { path:  '/etc/modprobe.d/DISABLEMOD.conf', line: 'install bluetooth /bin/true' }
+    - { path:  '/etc/modprobe.d/DISABLEMOD.conf', line: 'install bnep /bin/true' }
+    - { path:  '/etc/modprobe.d/DISABLEMOD.conf', line: 'install btusb /bin/true' }
+    - { path:  '/etc/modprobe.d/DISABLEMOD.conf', line: 'install cpia2 /bin/true' }
+    - { path:  '/etc/modprobe.d/DISABLEMOD.conf', line: 'install firewire-core /bin/true' }
+    - { path:  '/etc/modprobe.d/DISABLEMOD.conf', line: 'install floppy /bin/true' }
+    - { path:  '/etc/modprobe.d/DISABLEMOD.conf', line: 'install n_hdlc /bin/true' }
+    - { path:  '/etc/modprobe.d/DISABLEMOD.conf', line: 'install net-pf-31 /bin/true' }
+    - { path:  '/etc/modprobe.d/DISABLEMOD.conf', line: 'install pcspkr /bin/true' }
+    - { path:  '/etc/modprobe.d/DISABLEMOD.conf', line: 'install soundcore /bin/true' }
+    - { path:  '/etc/modprobe.d/DISABLEMOD.conf', line: 'install thunderbolt /bin/true' }
+    - { path:  '/etc/modprobe.d/DISABLEMOD.conf', line: 'install usb-midi /bin/true' }
+    - { path:  '/etc/modprobe.d/DISABLEMOD.conf', line: 'install usb-storage /bin/true' }
+    - { path:  '/etc/modprobe.d/DISABLEMOD.conf', line: 'install uvcvideo /bin/true' }
+    - { path:  '/etc/modprobe.d/DISABLEMOD.conf', line: 'install v4l2_common /bin/true' }
+
+- name: Make sure audit rule directory exists...
+  file:
+    path: /etc/audit/rules.d
+    state: directory
+
+- name: Configure root command execution auditing
+  blockinfile:
+    path: /etc/audit/rules.d/audit.rules
+    block: |
+      \#\# Monitor root command execution
+      -a exit,always -F arch=b64 -F euid=0 -S execve -k rootcmd
+      -a exit,always -F arch=b32 -F euid=0 -S execve -k rootcmd
+  when: InitialSetup

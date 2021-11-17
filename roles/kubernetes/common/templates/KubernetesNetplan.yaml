@@ -1,0 +1,15 @@
+network:
+    version: 2
+    renderer: networkd
+    ethernets:
+      eth0:
+        mtu: 1400
+        addresses: ['{{ vm_ipaddress }}/24']
+        gateway4: '{{ env_GatewayAddress }}'
+        nameservers:
+            addresses: ['{{ env_PrimaryDNSServer }}', '{{ env_SecondaryDNSServer }}', 1.1.1.1]
+            search:
+            - '{{ env_Domain }}'
+      eth1:
+        mtu: 1400
+        addresses: ['{{ vm_k8sipaddress }}/24']

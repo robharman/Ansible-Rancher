@@ -1,0 +1,21 @@
+all:
+  children:
+    pubrancher:
+      hosts:
+        rancher00:
+          vm_ipaddress:
+          vm_k8sipaddress:
+          vm_dockerdrive:
+          vm_initialnode: true
+        rancher01:
+          vm_ipaddress:
+          vm_k8sipaddress:
+          vm_dockerdrive:
+          vm_initialnode: false
+        rancher02:
+          vm_ipaddress:
+          vm_k8sipaddress:
+          vm_dockerdrive:
+          vm_initialnode: false
+      vars:
+        InitialSetup: true

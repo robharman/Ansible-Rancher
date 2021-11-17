@@ -1,0 +1,198 @@
+- name: Enable RKE inbound cluster traffic
+  community.general.ufw:
+    rule: allow
+    port: '{{ item[0] }}'
+    src: ' {{ item[1] }}'
+    proto: tcp
+  with_nested:
+    - [ 80, 443 ]
+    - [ '{{ kube_clusterips }}', '{{ kube_internalips}}', '10.42.0.0/15' ]
+  register: result
+  retries: 3
+  delay: 1
+  until: result is not failed
+
+- name: Install additional Python dependencies
+  pip:
+    name: '{{ item }}'
+    state: present
+  loop:
+    - docker-py
+    - openshift
+
+- name: add our login user to docker group
+  user:
+    name: '{{ ansible_user }}'
+    groups: [ docker ]
+    append: yes
+
+- name: Update docker systemd config
+  template:
+    src: dockerSystemd.conf
+    dest: /etc/docker/daemon.json
+
+- name: make sure docker is running
+  service:
+    name: docker
+    state: started
+    enabled: true
+
+- name: Check for Rancher binary
+  stat:
+    path: /usr/bin/rke
+  register: rancher_bin
+
+- name: Download Rancher Binaries
+  get_url:
+    url: '{{ rancher_installer }}'
+    checksum: '{{ rancher_installer256 }}'
+    dest: /usr/bin/rke
+    owner: root
+    group: root
+    mode: 0755
+  when: not rancher_bin.stat.exists
+
+- name: Add Rancher user
+  user:
+    name: rancher
+    home: /home/rancher
+    comment: Rancher Control
+    group: docker
+    generate_ssh_key: yes
+    ssh_key_type: ed25519
+    ssh_key_file: .ssh/id_ed25519
+
+- name: Create temporary local ssh key directory
+  tempfile:
+    state: directory
+    path: buffer/
+  register: sshkeydir
+  delegate_to: localhost
+  run_once: true
+
+- name: Allow shared access to '{{ sshkeydir.path }}'
+  file:
+    path: '{{ sshkeydir.path }}'
+    owner: '{{ ansible_user }}'
+    mode: 0700
+  delegate_to: localhost
+  run_once: true
+
+- name: Get Rancher user public ssh keys
+  fetch:
+    src: /home/rancher/.ssh/id_ed25519.pub
+    dest: "{{ sshkeydir.path }}/{{ ansible_hostname }}-id_ed25519.pub"
+    flat: yes
+
+- name: Set authorized_keys
+  authorized_key:
+    user: rancher
+    state: present
+    key: |
+      {% for rancher_sshkey in lookup('fileglob', '{{ sshkeydir.path }}/*-id_ed25519.pub', wantlist=true) -%}
+      {{ lookup('file', rancher_sshkey) }}
+      {% endfor %}
+    exclusive: true
+
+- name: Cleanup ssh keys
+  file:
+    path: "{{ sshkeydir.path }}"
+    state: absent
+  delegate_to: localhost
+  run_once: true
+
+- name: Make sure /etc/rancher is set
+  file:
+    path: /etc/rancher
+    state: directory
+    owner: rancher
+    group: docker
+    mode: '0754'
+
+- name: Copy Rancher config file
+  template:
+    src: 'rancherCluster.yml'
+    dest: /etc/rancher/cluster.yml
+    owner: rancher
+    group: docker
+    mode: 0644
+
+- name: Enable Rancher cluster
+  shell: /usr/bin/rke up
+  args:
+    chdir: /etc/rancher/
+  when: vm_initialnode
+
+- name: Create temporary local kubecontrol config directory
+  tempfile:
+    state: directory
+    path: buffer/
+  register: kubeconfigdir
+  delegate_to: localhost
+  run_once: true
+
+- name: Allow shared access to '{{ kubeconfig.path }}'
+  file:
+    path: '{{ kubeconfigdir.path }}'
+    owner: '{{ ansible_user }}'
+    mode: 0700
+  delegate_to: localhost
+  run_once: true
+
+- name: Get kube config
+  fetch:
+    src: /etc/rancher/kube_config_cluster.yml
+    dest: "{{ kubeconfigdir.path }}/rancher_kubeconfig"
+    flat: yes
+  when: vm_initialnode
+
+- name: Ensure kube config directories exist
+  file:
+    path: '{{ item.path }}'
+    owner: '{{ item.owner }}'
+    mode: '0700'
+    state: directory
+  loop:
+    - { path: '/home/rancher/.kube', owner: 'rancher' }
+    - { path: '/home/{{ ansible_user }}/.kube', owner: '{{ ansible_user }}' }
+    - { path: '/root/.kube', owner: 'root' }
+
+- name: Copy Kube config to config directories
+  copy:
+    src: "{{ kubeconfigdir.path }}/rancher_kubeconfig"
+    dest: '{{ item.path }}/config'
+    owner: '{{ item.owner }}'
+    mode: '0700'
+  loop:
+    - { path: '/home/rancher/.kube', owner: 'rancher' }
+    - { path: '/home/{{ ansible_user }}/.kube', owner: '{{ ansible_user }}' }
+    - { path: '/root/.kube', owner: 'root' }
+
+- name: Cleanup kube config
+  file:
+    path: "{{ kubeconfigdir.path }}"
+    state: absent
+  delegate_to: localhost
+  run_once: true
+
+- name: Export kube config to bash profile
+  lineinfile:
+    path: '{{ item.path }}'
+    line: 'KUBECONFIG={{ item.line }}'
+  loop:
+    - { path: '/home/rancher/.bashrc', line: '/home/rancher/.kube/config' }
+    - { path: '/home/{{ ansible_user }}/.bashrc', line: '/home/{{ ansible_user }}/.kube/config' }
+    - { path: '/root/.bashrc', line: '/root/.kube/config' }
+
+- name: Make sure owners own their own dirs
+  file:
+    path: '{{ item.path }}'
+    owner: '{{ item.owner }}'
+    recurse: yes
+  loop:
+    - { path: '/home/rancher/', owner: 'rancher' }
+    - { path: '/home/{{ ansible_user }}/', owner: '{{ ansible_user }}' }
+
+- name: Reboot to apply everything
+  reboot:
+    post_reboot_delay: 30

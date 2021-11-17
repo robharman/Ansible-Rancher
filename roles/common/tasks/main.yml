@@ -1,0 +1,2 @@
+- import_tasks: install_common.yml
+- import_tasks: harden_ubuntu.yml

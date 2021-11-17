@@ -1,0 +1,24 @@
+ansible_user:
+ansible_hostname:
+ansible_serveraddress:
+
+env_Domain:
+env_LocalTimeZone:
+
+env_LocalNetwork:
+env_GatewayAddress:
+env_LoadBalancerIP:
+env_PrimaryDNSServer:
+env_SecondaryDNSServer:
+
+docker_version: '20.10'
+
+rancher_hostname: 'rancher.{{ env_Domain }}'
+rancher_dockersh: https://releases.rancher.com/install-docker/{{ docker_version }}.sh
+rancher_dockersh256: 'sha256:2f56cfc1c3af7b5ec02593a23b0f2482c9b085612927022ead1062ffc9463e7b' # if using 20.10
+rancher_installer: 'https://github.com/rancher/rke/releases/download/v1.3.1/rke_linux-amd64'
+rancher_installer256: 'sha256:154d55b3a587edc2da497f621f2b302a393cf70e332001fcd2aad612dd479a41' # rke 1.3.1 amd64
+rancher_clustername: '{{ rancher_hostname }}_rke'
+
+kube_clusterips:
+kube_internalips:

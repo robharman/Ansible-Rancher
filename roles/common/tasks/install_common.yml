@@ -1,0 +1,16 @@
+---
+- name: Install common utilities
+  apt:
+    name: '{{ item }}'
+    state: latest
+  loop:
+    - apt-transport-https
+    - curl
+    - net-tools
+    - nfs-common
+    - software-properties-common
+    - python3
+    - python3-pip
+    - unattended-upgrades
+    - auditd
+    - audispd-plugins

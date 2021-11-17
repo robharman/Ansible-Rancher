@@ -1,0 +1,41 @@
+nodes:
+- address: '{{ kube_clusterips[0] }}'
+  internal_address: '{{ kube_internalips[0] }}'
+  role:
+    - controlplane
+    - etcd
+    - worker
+  user: 'rancher'
+  ssh_key_path: '/home/rancher/.ssh/id_ed25519'
+
+- address: '{{ kube_clusterips[1] }}'
+  internal_address: '{{ kube_internalips[1] }}'
+  role:
+    - controlplane
+    - etcd
+    - worker
+  user: 'rancher'
+  ssh_key_path: '/home/rancher/.ssh/id_ed25519'
+
+- address: '{{ kube_clusterips[2] }}'
+  internal_address: '{{ kube_internalips[2] }}'
+  role:
+    - controlplane
+    - etcd
+    - worker
+  user: 'rancher'
+  ssh_key_path: '/home/rancher/.ssh/id_ed25519'
+
+cluster_name: '{{ rancher_clustername }} '
+
+ingress:
+  provider: nginx
+  options:
+    use-forwarded-headers: 'true'
+    ssl-redirect: false
+
+services:
+  kube-api:
+    secrets_encryption_config:
+      enabled: true
+rotate_encryption_key: false
