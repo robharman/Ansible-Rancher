@@ -1,24 +1,41 @@
 all:
   children:
-    pubrancher:
+    rancher:
       hosts:
         rancher00:
           vm_ipaddress:
-          vm_k8sipaddress:
           vm_dockerdrive:
           vm_initialnode: true
           vm_reboottime: '05:00'
         rancher01:
           vm_ipaddress:
-          vm_k8sipaddress:
           vm_dockerdrive:
           vm_initialnode: false
           vm_reboottime: '05:15'
         rancher02:
           vm_ipaddress:
-          vm_k8sipaddress:
           vm_dockerdrive:
           vm_initialnode: false
           vm_reboottime: '05:30'
+      vars:
+        InitialSetup: true
+
+    plex:
+      hosts:
+        managed00:
+          vm_ipaddress:
+          vm_dockerdrive:
+          vm_initialnode: true
+          vm_reboottime: '04:00'
+        managed01:
+          vm_ipaddress:
+          vm_dockerdrive:
+          vm_initialnode: false
+          vm_reboottime: '04:15'
+        managed02:
+          vm_ipaddress:
+          vm_dockerdrive:
+          vm_initialnode: false
+          vm_reboottime: '04:30'
       vars:
         InitialSetup: true

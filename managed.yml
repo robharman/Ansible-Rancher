@@ -1,0 +1,12 @@
+---
+- hosts: managed
+  gather_facts: yes
+  become: yes
+  roles:
+    - role: common
+    - role: kubernetes/common
+    - role: kubernetes/ranchermanaged
+
+  post_tasks:
+    - reboot:
+      when: InitialSetup
