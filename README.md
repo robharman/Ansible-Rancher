@@ -20,29 +20,28 @@ I'm including the `common` role because these settings are applied to my base im
 Set the following in your hosts (as templated), or in `group_vars/rancher.yml`
 |  Variable Name  |  Type  |                   Purpose                      |
 |------------------------|------------|------------------------------------------------|
-|     ansible_user       |   string   | Global value of the ansible user account.      |
-|  ansible_serveraddress | ip address | Global value of Ansible server IP. Used for firewall. |
-|      env_Domain        |   string   | Global TLD for DNS                             |
-|    env_LocalTimeZone   |   string   | Global timezone for cluster.                   |
-|    env_LocalNetwork    | ip address | Local subnet, used in netplan.                 |
-|   env_GatewayAddress   | ip address | Local gateway address, used in netplan.        |
-|  env_PrimaryDNSServer  | ip address | Primary DNS Server IP, used in netplan.        |
-| env_SecondaryDNSServer | ip address | Secondary DNS Sserver IP, used in netplan.     |
-|   env_LoadBalancerIP   | ip address | Load balancer IP address, used for firewall.   |
-|    docker_version      |   version  | Global docker version to install. Defaults to 20.10 |
-|   rancher_hostname     |   string   | Per cluster. DNS hostname for Rancher. Defaults to `rancher.{{ env_domain }}` |
-|   rancher_dockersh     |   string   | Per cluster. URL for Docker install script to download from Rancher.com |
-|  rancher_clustername   |   string   | Per cluster. Internal cluster name for Rancher. Defaults to `{{ rancher_hostname }}_rke` |
-|  rancher_dockersh256   |   string   | Per cluster. SHA 256 hash for the Docker install script. |
-|   rancher_installer    |   string   | Per cluster. RKE installer URL.                |
-| rancher_installer256   |   string   | Per cluster. SHA 256 hash for the RKE installer |
-|     vm_ipaddress       |   string   | Per server. Server's primary IP address.                  |
-|    vm_k8sipaddress     |   string   | Per server. The private IP address to use for the cluster.|
-|    vm_initialnode      |    Bool    | Per cluster. Each cluster requires a initial node on which to run the cluster config, and Rancher installation. |
-|    vm_dockerdrive      |   string   | Per server. The physical `/dev/` path for the Docker hard drive |
-|   kube_clusterips      |   array    | Per cluster. List of cluster IPs to iterate through for firewall |
-|   kube_internalips     |   arrat    | Per cluster. List of the k8IP addresses to iterate through for firewall |
-|     InitialSetup       |    Bool    | Per cluster, or per server. Runs full setup on nodes where this is true. |
+|       ansible_user        |   string   | Global value of the ansible user account.      |
+|   ansible_serveraddress   | ip address | Global value of Ansible server IP. Used for firewall. |
+|        env_Domain         |   string   | Global TLD for DNS                             |
+|     env_LocalTimeZone     |   string   | Global timezone for cluster.                   |
+|      env_LocalNetwork     | ip address | Local subnet, used in netplan.                 |
+|     env_GatewayAddress    | ip address | Local gateway address, used in netplan.        |
+|    env_PrimaryDNSServer   | ip address | Primary DNS Server IP, used in netplan.        |
+|   env_SecondaryDNSServer  | ip address | Secondary DNS Sserver IP, used in netplan.     |
+|     env_LoadBalancerIP    | ip address | Load balancer IP address, used for firewall.   |
+|       docker_version      |   version  | Global docker version to install. Defaults to 20.10 |
+|      rancher_hostname     |   string   | Per cluster. DNS hostname for Rancher. Defaults to `rancher.{{ env_domain }}` |
+|     rancher_clustername   |   string   | Per cluster. Internal cluster name for Rancher. Defaults to `{{ rancher_hostname }}_rke` |
+|     rancher_dockersh256   |   string   | Per cluster. SHA 256 hash for the Docker install script. Defaults to 20.10 |
+|      rancher_installer    |   string   | Per cluster. RKE installer URL.                |
+|    rancher_installer256   |   string   | Per cluster. SHA 256 hash for the RKE installer. |
+| rancher_managedhostsubnet |   string   | Per managed cluster. Subnet range. Used for firewall. |
+| rancher_bootstrappassword |   string   | Per Rancher cluster. Initial setup password for admin user. |
+|       vm_ipaddress        |   string   | Per server. Server's primary IP address.                  |
+|      vm_initialnode       |    Bool    | Per cluster. Each cluster requires a initial node on which to run the cluster config, and Rancher installation. |
+|      vm_dockerdrive       |   string   | Per server. The physical `/dev/` path for the Docker hard drive |
+|      kube_clusterips      |   array    | Per cluster. List of cluster IPs to iterate through for firewall |
+|       InitialSetup        |    Bool    | Per cluster, or per server. Runs full setup on nodes where this is true. |
 
 ## Other Requirements
 - Three nodes.

@@ -2,15 +2,21 @@
 - name: Update netplan
   template:
     src: 'KubernetesNetplan.yaml'
-    dest: /etc/netplan/50-initial-netplan.yaml
+    dest: /etc/netplan/50-kubernetes-netplan.yaml
     owner: root
     group: root
     mode: 0644
   when: InitialSetup
 
+- name: Remove default netplan
+  file:
+    state: absent
+    path: /etc/netplan/99-setup.yaml
+  when: InitialSetup
+
 - name: Apply netplan
-  shell:
-    cmd: netplan apply
+  shell: netplan apply
+  when: InitialSetup
 
 - name: Disable Swap
   lineinfile:
@@ -18,19 +24,20 @@
     line: '# \1'
     regexp: '^(/swap\.img\s*none\s*swap\s*sw\s*0\s*0)'
 
-# Comment out if not using a dedicated drive for docker library directory
 - name: Create Docker partition
   parted:
     device: '{{ vm_dockerdrive }}'
     number: 1
     flags: [ lvm ]
     state: present
+  when: InitialSetup
 
 - name: Create Docker VG
   lvg:
     vg: docker-vg
     pvs: '{{ vm_dockerdrive }}1'
     pesize: 255GB
+  when: InitialSetup
 
 - name: Create Docker LV
   lvol:
@@ -38,25 +45,45 @@
     lv: docker-lv
     size: 255g
     force: yes
+  when: InitialSetup
 
 - name: Format Docker LV
   filesystem:
     fstype: ext4
     dev: /dev/docker-vg/docker-lv
+  when: InitialSetup
 
 - name: Create Docker mount point
   file:
     path: /var/lib/docker
     state: directory
     mode: '0755'
+  when: InitialSetup
 
 - name: Mount Docker LV
-  mount:
+  ansible.builtin.mount:
     path: /var/lib/docker
     src: /dev/docker-vg/docker-lv
     fstype: ext4
     state: mounted
-# End comment out for docker drive
+  when: InitialSetup
+
+- name: Enable bridge traffic for Kubernetes vNICs
+  community.general.ufw:
+    rule: allow
+    interface: '{{ item.interface }}'
+    direction: '{{ item.direction }}'
+  loop:
+    - { interface: 'cali+',    direction: 'in'  }
+    - { interface: 'cali+',    direction: 'out' }
+    - { interface: 'cni+',     direction: 'in'  }
+    - { interface: 'cni+',     direction: 'out' }
+    - { interface: 'flannel+', direction: 'in'  }
+    - { interface: 'flannel+', direction: 'out' }
+  register: result
+  retries: 3
+  delay: 1
+  until: result is not failed
 
 - name: determine if docker is installed
   command: which docker
@@ -72,74 +99,20 @@
 
 - name: Download Rancher Docker Install script
   get_url:
-    url: '{{ rancher_dockersh }}'
-    checksum: '{{ rancher_dockersh256 }}'
+    url: https://releases.rancher.com/install-docker/{{ docker_Version }}.sh
+    checksum: '{{ rancher_Dockersh256 }}'
     dest: /tmp/install-docker.sh
     owner: root
     group: root
-    mode: '0750'
+    mode: 0755
   when: not docker_installed.rc == 0 or
-        not docker_installed_version.stdout is search(docker_version|string)
+        not docker_installed_version.stdout is search(docker_Version|string)
   register: docker_install_script_downloaded
 
 - name: Install Docker
   shell: /tmp/install-docker.sh
   when: docker_install_script_downloaded and
         not docker_installed.rc == 0
-
-- name: Enable firewall exceptions for cluster
-  community.general.ufw:
-    rule: allow
-    src: '{{ item }}'
-    dest: '{{ vm_k8sipaddress }}'
-  loop: '{{ kube_internalips }}'
-
-- name: Enable TCP firewall exceptions for cluster
-  community.general.ufw:
-    rule: allow
-    src: '{{ item[0] }}'
-    dest: '{{ vm_ipaddress }}'
-    port: '{{ item[1] }}'
-  with_nested:
-    - '{{ kube_clusterips }}'
-    - [ 22, 6443, 8443, 8472 ]
-  register: result
-  retries: 3
-  delay: 1
-  until: result is not failed
-
-- name: Enable kube to kluster communication
-  community.general.ufw:
-    rule: allow
-    src: '{{ item[0] }}'
-    dest: '{{ vm_k8sipaddress }}'
-    port: '{{ item[1] }}'
-  with_nested:
-    - '{{ kube_clusterips }}'
-    - [ 2379, 2380 ]
-  register: result
-  retries: 3
-  delay: 1
-  until: result is not failed
-
-- name: Enable inbound https from load balancer.
-  community.general.ufw:
-    rule: allow
-    src: '{{ env_LoadBalancerIP }}'
-    dest: '{{ vm_ipaddress }}'
-    port: 443
-  register: result
-  retries: 3
-  delay: 1
-  until: result is not failed
-
-- name: Reload UFW to apply changes
-  community.general.ufw:
-    state: reloaded
-  register: result
-  retries: 3
-  delay: 1
-  until: result is not failed
 
 - name: Validate Kubernetes repo added
   stat:

@@ -1,0 +1,53 @@
+- name: Enable TCP etcd and control plane firewall exceptions
+  community.general.ufw:
+    rule: allow
+    dest: '{{ vm_ipaddress }}'
+    direction: in
+    port: '{{ item }}'
+    src: '{{ kube_clustersubnet }}'
+    proto: tcp
+  loop:
+    - 22
+    - 443
+    - 2379
+    - 2380
+    - 6443
+    - 9099
+    - 10250
+    - 10254
+  register: result
+  retries: 3
+  delay: 1
+  until: result is not failed
+
+- name: Enable RKE2 TCP ports
+  community.general.ufw:
+    rule: allow
+    dest: '{{ vm_ipaddress }}'
+    direction: in
+    port: '{{ item }}'
+    src: '{{ kube_clustersubnet }}'
+    proto: tcp
+  loop:
+    - 9345
+  register: result
+  retries: 3
+  delay: 1
+  until: result is not failed
+  when: kube_RKE2 is defined and kube_RKE2 | bool == true
+
+- name: Enable UDP etcd and control plane firewall exceptions
+  community.general.ufw:
+    rule: allow
+    dest: '{{ vm_ipaddress }}'
+    direction: in
+    port: '{{ item }}'
+    src: '{{ kube_clustersubnet }}'
+    proto: udp
+  loop:
+    - 4789
+    - 8472
+  register: result
+  retries: 3
+  delay: 1
+  until: result is not failed
