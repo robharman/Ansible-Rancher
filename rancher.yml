@@ -7,3 +7,8 @@
     - role: kubernetes/common
     - role: kubernetes/rke
     - role: kubernetes/rancher
+    - role: kubernetes/ranchermgmt
+
+  post_tasks:
+    - reboot:
+      when: InitialSetup
