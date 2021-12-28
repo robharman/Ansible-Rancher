@@ -14,7 +14,7 @@ I'm including the `common` role because these settings are applied to my base im
 - This allows the ansible user to run kubectl commands, this may or may not be permissible for you.
 - The auditd configuration in roles/common/tasks/harden_ubuntu should be tuned to your requirements. As is, this just audits all sudo commands.
 - This dynamically generates ssh keys for the rancher user on each host, and temporarily copies the public key to the Ansible server before adding them to the rancher user's `authorized_keys` file. This may not be what you want.
-- There's no vault here for anything, and you do need to be able to copy a private key for the Rancher admin page.
+- There's no vault here for anything, and you do need to be able to copy a private key and set the bootstrap password for the Rancher admin page.
 
 ## Required Variables
 Set the following in your hosts (as templated), or in `group_vars/rancher.yml`
@@ -45,7 +45,6 @@ Set the following in your hosts (as templated), or in `group_vars/rancher.yml`
 
 ## Other Requirements
 - Three nodes.
-- VM needs to have two NICs (`eth0` and `eth1`)
-- VM needs to have a second hard drive, or comment out the relevant section in `roles/kubernetes/common/tasks/main.yml`
+- VM needs to have two NICs (`eth0`)
+- VM needs to have a second hard drive.
 - Ingress certificate and private key must be saved in `roles/kubernetes/rancher/files` as `rancher-ingress.crt` and `rancher-ingress.key`.
-- If your cert was issued by an internal CA other than a root CA, you need to uncomment the relevant lines in `roles/kubernettes/rancher/tasks/main.yml`. You'll need to save the full Cert chain saved in `roles/kubernetes/rancher/files` as `cacerts.crt` in DER format.
