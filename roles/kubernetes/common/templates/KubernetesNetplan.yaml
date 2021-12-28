@@ -10,6 +10,3 @@ network:
             addresses: ['{{ env_PrimaryDNSServer }}', '{{ env_SecondaryDNSServer }}', 1.1.1.1]
             search:
             - '{{ env_Domain }}'
-      eth1:
-        mtu: 1400
-        addresses: ['{{ vm_k8sipaddress }}/24']

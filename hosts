@@ -7,15 +7,18 @@ all:
           vm_k8sipaddress:
           vm_dockerdrive:
           vm_initialnode: true
+          vm_reboottime: '05:00'
         rancher01:
           vm_ipaddress:
           vm_k8sipaddress:
           vm_dockerdrive:
           vm_initialnode: false
+          vm_reboottime: '05:15'
         rancher02:
           vm_ipaddress:
           vm_k8sipaddress:
           vm_dockerdrive:
           vm_initialnode: false
+          vm_reboottime: '05:30'
       vars:
         InitialSetup: true

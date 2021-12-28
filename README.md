@@ -14,39 +14,37 @@ I'm including the `common` role because these settings are applied to my base im
 - This allows the ansible user to run kubectl commands, this may or may not be permissible for you.
 - The auditd configuration in roles/common/tasks/harden_ubuntu should be tuned to your requirements. As is, this just audits all sudo commands.
 - This dynamically generates ssh keys for the rancher user on each host, and temporarily copies the public key to the Ansible server before adding them to the rancher user's `authorized_keys` file. This may not be what you want.
-- There's no vault here for anything, and you do need to be able to copy a private key for the Rancher admin page.
+- There's no vault here for anything, and you do need to be able to copy a private key and set the bootstrap password for the Rancher admin page.
 
 ## Required Variables
 Set the following in your hosts (as templated), or in `group_vars/rancher.yml`
 |  Variable Name  |  Type  |                   Purpose                      |
 |------------------------|------------|------------------------------------------------|
-|     ansible_user       |   string   | Global value of the ansible user account.      |
-|  ansible_serveraddress | ip address | Global value of Ansible server IP. Used for firewall. |
-|      env_Domain        |   string   | Global TLD for DNS                             |
-|    env_LocalTimeZone   |   string   | Global timezone for cluster.                   |
-|    env_LocalNetwork    | ip address | Local subnet, used in netplan.                 |
-|   env_GatewayAddress   | ip address | Local gateway address, used in netplan.        |
-|  env_PrimaryDNSServer  | ip address | Primary DNS Server IP, used in netplan.        |
-| env_SecondaryDNSServer | ip address | Secondary DNS Sserver IP, used in netplan.     |
-|   env_LoadBalancerIP   | ip address | Load balancer IP address, used for firewall.   |
-|    docker_version      |   version  | Global docker version to install. Defaults to 20.10 |
-|   rancher_hostname     |   string   | Per cluster. DNS hostname for Rancher. Defaults to `rancher.{{ env_domain }}` |
-|   rancher_dockersh     |   string   | Per cluster. URL for Docker install script to download from Rancher.com |
-|  rancher_clustername   |   string   | Per cluster. Internal cluster name for Rancher. Defaults to `{{ rancher_hostname }}_rke` |
-|  rancher_dockersh256   |   string   | Per cluster. SHA 256 hash for the Docker install script. |
-|   rancher_installer    |   string   | Per cluster. RKE installer URL.                |
-| rancher_installer256   |   string   | Per cluster. SHA 256 hash for the RKE installer |
-|     vm_ipaddress       |   string   | Per server. Server's primary IP address.                  |
-|    vm_k8sipaddress     |   string   | Per server. The private IP address to use for the cluster.|
-|    vm_initialnode      |    Bool    | Per cluster. Each cluster requires a initial node on which to run the cluster config, and Rancher installation. |
-|    vm_dockerdrive      |   string   | Per server. The physical `/dev/` path for the Docker hard drive |
-|   kube_clusterips      |   array    | Per cluster. List of cluster IPs to iterate through for firewall |
-|   kube_internalips     |   arrat    | Per cluster. List of the k8IP addresses to iterate through for firewall |
-|     InitialSetup       |    Bool    | Per cluster, or per server. Runs full setup on nodes where this is true. |
+|       ansible_user        |   string   | Global value of the ansible user account.      |
+|   ansible_serveraddress   | ip address | Global value of Ansible server IP. Used for firewall. |
+|        env_Domain         |   string   | Global TLD for DNS                             |
+|     env_LocalTimeZone     |   string   | Global timezone for cluster.                   |
+|      env_LocalNetwork     | ip address | Local subnet, used in netplan.                 |
+|     env_GatewayAddress    | ip address | Local gateway address, used in netplan.        |
+|    env_PrimaryDNSServer   | ip address | Primary DNS Server IP, used in netplan.        |
+|   env_SecondaryDNSServer  | ip address | Secondary DNS Sserver IP, used in netplan.     |
+|     env_LoadBalancerIP    | ip address | Load balancer IP address, used for firewall.   |
+|       docker_version      |   version  | Global docker version to install. Defaults to 20.10 |
+|      rancher_hostname     |   string   | Per cluster. DNS hostname for Rancher. Defaults to `rancher.{{ env_domain }}` |
+|     rancher_clustername   |   string   | Per cluster. Internal cluster name for Rancher. Defaults to `{{ rancher_hostname }}_rke` |
+|     rancher_dockersh256   |   string   | Per cluster. SHA 256 hash for the Docker install script. Defaults to 20.10 |
+|      rancher_installer    |   string   | Per cluster. RKE installer URL.                |
+|    rancher_installer256   |   string   | Per cluster. SHA 256 hash for the RKE installer. |
+| rancher_managedhostsubnet |   string   | Per managed cluster. Subnet range. Used for firewall. |
+| rancher_bootstrappassword |   string   | Per Rancher cluster. Initial setup password for admin user. |
+|       vm_ipaddress        |   string   | Per server. Server's primary IP address.                  |
+|      vm_initialnode       |    Bool    | Per cluster. Each cluster requires a initial node on which to run the cluster config, and Rancher installation. |
+|      vm_dockerdrive       |   string   | Per server. The physical `/dev/` path for the Docker hard drive |
+|      kube_clusterips      |   array    | Per cluster. List of cluster IPs to iterate through for firewall |
+|       InitialSetup        |    Bool    | Per cluster, or per server. Runs full setup on nodes where this is true. |
 
 ## Other Requirements
 - Three nodes.
-- VM needs to have two NICs (`eth0` and `eth1`)
-- VM needs to have a second hard drive, or comment out the relevant section in `roles/kubernetes/common/tasks/main.yml`
+- VM needs to have two NICs (`eth0`)
+- VM needs to have a second hard drive.
 - Ingress certificate and private key must be saved in `roles/kubernetes/rancher/files` as `rancher-ingress.crt` and `rancher-ingress.key`.
-- If your cert was issued by an internal CA other than a root CA, you need to uncomment the relevant lines in `roles/kubernettes/rancher/tasks/main.yml`. You'll need to save the full Cert chain saved in `roles/kubernetes/rancher/files` as `cacerts.crt` in DER format.

@@ -1,0 +1,21 @@
+- name: Enable managed kube to cluster communication port 2379
+  community.general.ufw:
+    rule: allow
+    src: '{{ rancher_managedhostsubnet }}'
+    dest: '{{ vm_ipaddress }}'
+    port: 2379
+  register: result
+  retries: 3
+  delay: 1
+  until: result is not failed
+
+- name: Enable kube to cluster communication port 2380
+  community.general.ufw:
+    rule: allow
+    src: '{{ rancher_managedhostsubnet }}'
+    dest: '{{ vm_ipaddress }}'
+    port: 2380
+  register: result
+  retries: 3
+  delay: 1
+  until: result is not failed

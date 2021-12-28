@@ -17,7 +17,7 @@
     - { line: 'Unattended-Upgrade::Remove-Unused-Kernel-Packages "true";', path: '/etc/apt/apt.conf.d/50unattended-upgrades' }
     - { line: 'Unattended-Upgrade::Remove-Unused-Dependencies "true";', path: '/etc/apt/apt.conf.d/50unattended-upgrades' }
     - { line: 'Unattended-Upgrade::Automatic-Reboot "true";', path: '/etc/apt/apt.conf.d/50unattended-upgrades' }
-    - { line: 'Unattended-Upgrade::Automatic-Reboot-Time "05:30";', path: '/etc/apt/apt.conf.d/50unattended-upgrades' }
+    - { line: 'Unattended-Upgrade::Automatic-Reboot-Time "{{ vm_reboottime }}";', path: '/etc/apt/apt.conf.d/50unattended-upgrades' }
 
 - name: Set auto-update period
   lineinfile:
