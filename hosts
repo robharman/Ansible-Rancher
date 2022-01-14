@@ -20,7 +20,7 @@ all:
       vars:
         InitialSetup: true
 
-    plex:
+    ranchermanaged:
       hosts:
         managed00:
           vm_ipaddress:
